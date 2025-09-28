@@ -2,48 +2,50 @@ import User from "../models/User.js";
 import Note from "../models/Note.js";
 import asyncHandler from "express-async-handler";
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 
-// @route get /users
-// @access private
+// @route GET /users
+// @access Private
 const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.find().select("-password").lean();
-  if (!users || !users.length)
+  if (!users || !users.length) {
     return res.status(400).json({ message: "No users found" });
-  return res.json(users);
+  }
+  return res.json({ users });
 });
 
-// @route post /users
-// @access private
+// @route POST /users
+// @access Private
 const createUser = asyncHandler(async (req, res) => {
   const { username, password, roles } = req.body;
   if (!username || !password || !Array.isArray(roles) || !roles.length) {
     return res.status(400).json({ message: "All fields are required" });
   }
+
   const duplicate = await User.findOne({ username }).lean();
   if (duplicate) {
     return res.status(409).json({ message: "Username is already used" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-
   const userObj = { username, password: hashedPassword, roles };
 
   const user = await User.create(userObj);
 
   if (user) {
-    return res.status(201).json({ message: "New user created", user });
+    return res.json(user);
   } else {
-    return res.status(400).json({ message: "Invalid user data received " });
+    return res.status(400).json({ message: "Invalid user data received" });
   }
 });
 
-// @route patch /users
-// @access private
+// @route PATCH /users/:id
+// @access Private
 const updateUser = asyncHandler(async (req, res) => {
-  const { id, username, password, roles, active } = req.body;
+  const { id } = req.params;
+  const { username, password, roles, active } = req.body;
 
   if (
-    !id ||
     !username ||
     !Array.isArray(roles) ||
     !roles.length ||
@@ -61,7 +63,7 @@ const updateUser = asyncHandler(async (req, res) => {
     return res.status(409).json({ message: "Username is already used" });
   }
 
-  let updateFields = {
+  const updateFields = {
     username,
     roles,
     active,
@@ -80,18 +82,19 @@ const updateUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User not found" });
   }
 
-  return res.json({ message: "Updated user", user: updatedUser });
+  return res.json(updatedUser);
 });
 
-// @route delete /users
-// @access private
+// @route DELETE /users/:id
+// @access Private
 const deleteUser = asyncHandler(async (req, res) => {
-  const { id } = req.body;
-  if (!id) {
-    return res.status(400).json({ message: "User id is required" });
-  }
-  const note = await Note.findOne({ user: id }).lean();
+  const { id } = req.params;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  const note = await Note.findOne({ user: id }).lean();
   if (note) {
     return res.status(400).json({ message: "User has assigned notes" });
   }
@@ -101,7 +104,7 @@ const deleteUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User not found" });
   }
 
-  return res.json({ message: "User deleted successfully", user: deleteResult });
+  return res.json(deletedUser);
 });
 
 const userControllers = {

@@ -3,11 +3,12 @@ import userControllers from "../controllers/userControllers.js";
 
 const router = express.Router();
 
-router
-  .route("/")
-  .get(userControllers.getAllUsers)
-  .post(userControllers.createUser)
-  .patch(userControllers.updateUser)
-  .delete(userControllers.deleteUser);
+router.get("/", userControllers.getAllUsers);
+
+router.post("/", userControllers.createUser);
+
+router.patch("/:id", userControllers.updateUser);
+
+router.delete("/:id", userControllers.deleteUser);
 
 export default router;

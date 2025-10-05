@@ -14,11 +14,36 @@ const getAllUsers = asyncHandler(async (req, res) => {
   return res.json({ users });
 });
 
+// @route   GET /api/users/:id
+// @access  Private/Admin
+const getUserById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Validate MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  const user = await User.findById(id).lean();
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  return res.json({ user });
+});
+
 // @route POST /users
 // @access Private
 const createUser = asyncHandler(async (req, res) => {
-  const { username, password, roles } = req.body;
-  if (!username || !password || !Array.isArray(roles) || !roles.length) {
+  const { username, password, roles, active } = req.body;
+  if (
+    !username ||
+    !password ||
+    !Array.isArray(roles) ||
+    !roles.length ||
+    active === undefined
+  ) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -28,12 +53,12 @@ const createUser = asyncHandler(async (req, res) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const userObj = { username, password: hashedPassword, roles };
+  const userObj = { username, password: hashedPassword, roles, active };
 
   const user = await User.create(userObj);
 
   if (user) {
-    return res.json(user);
+    return res.json({ user });
   } else {
     return res.status(400).json({ message: "Invalid user data received" });
   }
@@ -82,7 +107,7 @@ const updateUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User not found" });
   }
 
-  return res.json(updatedUser);
+  return res.json({ user: updatedUser });
 });
 
 // @route DELETE /users/:id
@@ -104,11 +129,12 @@ const deleteUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User not found" });
   }
 
-  return res.json(deletedUser);
+  return res.json({ user: deletedUser });
 });
 
 const userControllers = {
   getAllUsers,
+  getUserById,
   createUser,
   updateUser,
   deleteUser,

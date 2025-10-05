@@ -19,14 +19,32 @@ const getAllNotes = asyncHandler(async (req, res) => {
     })
   );
 
-  return res.json(notesWithUser);
+  return res.json({ notes: notesWithUser });
+});
+
+// @route   GET /notes/:id
+// @access  Private
+const getNoteById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid note ID" });
+  }
+
+  const note = await Note.findById(id).lean();
+
+  if (!note) {
+    return res.status(404).json({ message: "Note not found" });
+  }
+
+  return res.status(200).json({ note });
 });
 
 // @route POST /notes
 // @access Private
 const createNewNote = asyncHandler(async (req, res) => {
   // const user_id = req.user._id;
-  const { user, title, text } = req.body;
+  const { user, title, text, completed } = req.body;
   if (!user || !title || !text) {
     return res.status(400).json({ message: "All fields are required" });
   }
@@ -36,13 +54,13 @@ const createNewNote = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Note title is already used" });
   }
 
-  const note = await Note.create({ user, title, text });
+  const note = await Note.create({ user, title, text, completed });
 
   if (!note) {
     return res.status(400).json({ message: "Invalid Note Data received" });
   }
 
-  return res.json(note);
+  return res.json({ note });
 });
 
 // @route PATCH /notes/:id
@@ -74,7 +92,7 @@ const updateNote = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Note not found" });
   }
 
-  return res.status(200).json(updatedNote);
+  return res.status(200).json({ note: updatedNote });
 });
 
 // @route DELETE /notes/:id
@@ -91,11 +109,12 @@ const deleteNote = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Note not found" });
   }
 
-  return res.json(deletedNote);
+  return res.json({ note: deletedNote });
 });
 
 const noteControllers = {
   getAllNotes,
+  getNoteById,
   createNewNote,
   updateNote,
   deleteNote,

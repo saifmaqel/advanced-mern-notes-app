@@ -11,6 +11,8 @@ import connectDB from "../config/dbConn.js";
 import mongoose from "mongoose";
 import userRoutes from "./routes/userRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
+import authRoutes from "./routes/authRouts.js";
+// import loginLimiter from "../middleware/loginLimiter.js";
 
 dotenv.config();
 const PORT = process.env.PORT || 3500;
@@ -23,8 +25,11 @@ app.use(logger);
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+
+// app.use(loginLimiter);
 app.use("/", express.static(path.join(process.cwd(), "public")));
 app.use("/", root);
+app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/notes", noteRoutes);
 

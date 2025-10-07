@@ -93,7 +93,7 @@ export default function AddEditNote() {
     const note: AddEditNote = {
       text,
       title,
-      user: "68c01ded11337dec98d73199",
+      user: "",
       completed,
     };
 

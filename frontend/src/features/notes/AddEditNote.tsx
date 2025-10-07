@@ -71,8 +71,6 @@ export default function AddEditNote() {
             newNotes = [...existingNotes];
             newNotes[noteIndex] = updatedNote;
           } else {
-            console.log(updatedNote);
-
             newNotes = [...existingNotes, updatedNote];
           }
 

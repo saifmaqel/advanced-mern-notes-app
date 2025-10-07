@@ -23,7 +23,7 @@ export function scheduleTokenExpiryWatcher(expiresIn: number) {
 }
 
 export const api = axios.create({
-  baseURL: "https://technotes.onrender.com",
+  baseURL: "https://technotes-api-1a2h.onrender.com",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",

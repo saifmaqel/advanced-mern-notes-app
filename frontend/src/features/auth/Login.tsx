@@ -3,8 +3,11 @@ import { useMutation } from "@tanstack/react-query";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "./authSlice";
 import authApis from "../../api/authApis";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { scheduleTokenExpiryWatcher } from "../../api/axiosInstance";
+import { useEffect } from "react";
+import { store } from "../../store/store";
+import toast from "react-hot-toast";
 
 interface LoginFormValues {
   username: string;
@@ -44,6 +47,15 @@ export default function LoginPage() {
   const onSubmit = (values: LoginFormValues) => {
     mutate(values);
   };
+
+  useEffect(() => {
+    if (store.getState().auth.token) {
+      toast("You are already logged in");
+      setTimeout(() => {
+        navigate("/dash");
+      }, 1000);
+    }
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-indigo-100 flex items-center justify-center px-4">
@@ -103,6 +115,15 @@ export default function LoginPage() {
             Logged in successfully!
           </p>
         )}
+        <p className="text-center text-sm text-gray-600 mt-6">
+          Don’t have an account?{" "}
+          <Link
+            to="/signup"
+            className="text-indigo-600 font-medium hover:underline"
+          >
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );

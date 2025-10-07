@@ -1,14 +1,14 @@
 import { Outlet } from "react-router-dom";
-import DashHeader from "./DashHeader";
 import DashFooter from "./DashFooter";
+import DashHeader from "./DashHeader";
 
 function DashLayout() {
   return (
-    <div className="flex flex-col min-h-screen ">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <DashHeader />
-      <div className="flex flex-col flex-1 overflow-y-auto bg-gray-50 px-6 py-4 ">
+      <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4">
         <Outlet />
-      </div>
+      </main>
       <DashFooter />
     </div>
   );

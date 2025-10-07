@@ -5,7 +5,8 @@ import loginLimiter from "../../middleware/loginLimiter.js";
 const router = express.Router();
 
 router.post("/", loginLimiter, authController.login);
-// router.post("/", authController.login);
+
+router.post("/signup", authController.signup);
 
 router.get("/refresh", authController.refresh);
 

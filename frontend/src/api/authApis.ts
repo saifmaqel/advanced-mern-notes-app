@@ -5,6 +5,7 @@ import type {
   LoginResponse,
   RefreshResponse,
   LogoutResponse,
+  SignupRequest,
 } from "./types";
 
 const resourceAuth = "auth";
@@ -15,6 +16,16 @@ async function login(data: LoginRequest): Promise<LoginResponse> {
   const body = data;
   const fetched = await api.post(url, body, {
     withCredentials: true, // important for cookies (refresh token)
+  });
+  return fetched.data;
+}
+
+// POST /auth/signup
+async function signup(data: SignupRequest): Promise<LoginResponse> {
+  const url = `/${resourceAuth}/signup`;
+  const body = data;
+  const fetched = await api.post(url, body, {
+    withCredentials: true,
   });
   return fetched.data;
 }
@@ -45,6 +56,7 @@ const authApis = {
   login,
   refresh,
   logout,
+  signup,
 };
 
 export default authApis;

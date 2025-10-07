@@ -10,6 +10,13 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface SignupRequest {
+  username: string;
+  password: string;
+  roles: string[];
+  active: boolean;
+}
+
 export interface LoginResponse extends ResponseObject {
   accessToken: string;
   expiresIn: number;

@@ -1,12 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { NOTES_LIST_QUERY_KEY } from "../constants";
 import notesApis from "../../api/noteApis";
-import type { Note } from "../../api/types";
+import type { GetAllNotesResponse, Note } from "../../api/types";
 import { useNavigate } from "react-router-dom";
+import useAuth from "../../hooks/useAuth";
+import { useState } from "react";
+import LoadingScreen from "../../components/LoadingScreen";
 
 function NotesList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAdmin, isManager, username } = useAuth();
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
   const { data, isPending, error } = useQuery({
     queryKey: [NOTES_LIST_QUERY_KEY],
@@ -23,20 +28,38 @@ function NotesList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (noteId: string) => {
+      setDeletingNoteId(noteId);
       return notesApis.remove(noteId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [NOTES_LIST_QUERY_KEY] });
+    onSuccess: (response, noteId) => {
+      if (!response) return;
+
+      queryClient.setQueryData(
+        [NOTES_LIST_QUERY_KEY],
+        (oldData: GetAllNotesResponse | undefined) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            notes: oldData.notes.filter((note) => note._id !== noteId),
+          };
+        }
+      );
+    },
+    onSettled: () => {
+      setDeletingNoteId(null);
     },
   });
 
-  if (isPending) return <p>Loading…</p>;
+  if (isPending) return <LoadingScreen />;
   if (error instanceof Error) return <p>Error: {error.message}</p>;
 
-  const notes = data?.notes ?? [];
+  const notes =
+    isAdmin || isManager
+      ? data?.notes
+      : data?.notes.filter((note) => note.username === username);
 
   return (
-    <div className="flex flex-col w-full max-w-7xl mx-auto px-6 py-4">
+    <div className="flex flex-col w-full flex-1 max-w-7xl mx-auto px-6 py-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Notes List</h1>
         <button
@@ -47,8 +70,13 @@ function NotesList() {
         </button>
       </div>
 
+      {notes?.length === 0 && (
+        <div className="mx-auto  text-lg font-bold">
+          <h1>No notes available </h1>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {notes.map((note) => (
+        {notes?.map((note) => (
           <div
             key={note._id}
             className="border rounded-lg shadow-sm bg-white p-4 flex flex-col justify-between hover:shadow-md transition-shadow"
@@ -77,10 +105,14 @@ function NotesList() {
               </button>
               <button
                 onClick={() => deleteMutation.mutate(note._id)}
-                disabled={deleteMutation.isPending}
+                disabled={
+                  deleteMutation.isPending && deletingNoteId === note._id
+                }
                 className="px-3 py-1 text-sm font-medium text-white border bg-red-600 rounded hover:bg-red-500 disabled:opacity-50 cursor-pointer"
               >
-                {deleteMutation.isPending ? "Deleting…" : "Delete"}
+                {deleteMutation.isPending && deletingNoteId === note._id
+                  ? "Deleting…"
+                  : "Delete"}
               </button>
             </div>
           </div>

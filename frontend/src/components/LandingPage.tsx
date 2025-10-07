@@ -28,7 +28,7 @@ export default function LandingPage() {
           to="/login"
           className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg shadow hover:bg-indigo-700 transition"
         >
-          Employee Login
+          Login
         </Link>
       </div>
     </div>

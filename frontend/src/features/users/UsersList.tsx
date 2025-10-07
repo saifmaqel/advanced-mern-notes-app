@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AgGridReact } from "ag-grid-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
@@ -9,14 +9,17 @@ import {
 } from "ag-grid-community";
 import { useNavigate } from "react-router-dom";
 import usersApis from "../../api/userApis"; // must have list(), delete() implemented
-import type { User } from "../../api/types";
+import type { GetAllUsersResponse, User } from "../../api/types";
 import { USERS_LIST_QUERY_KEY } from "../constants";
+import LoadingScreen from "../../components/LoadingScreen";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 function UsersList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   const { data, isPending, error } = useQuery({
     queryKey: [USERS_LIST_QUERY_KEY],
@@ -36,10 +39,25 @@ function UsersList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
+      setDeletingUserId(userId);
       return usersApis.remove(userId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [USERS_LIST_QUERY_KEY] });
+    onSuccess: (response, userId) => {
+      if (!response) return;
+
+      queryClient.setQueryData(
+        [USERS_LIST_QUERY_KEY],
+        (oldData: GetAllUsersResponse | undefined) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            users: oldData.users.filter((user) => user._id !== userId),
+          };
+        }
+      );
+    },
+    onSettled: () => {
+      setDeletingUserId(null);
     },
   });
 
@@ -62,7 +80,9 @@ function UsersList() {
               disabled={deleteMutation.isPending}
               className="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-red-600 border border-red-600 rounded hover:bg-red-500 cursor-pointer"
             >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              {deleteMutation.isPending && params.data?._id === deletingUserId
+                ? "Deleting…"
+                : "Delete"}
             </button>
           </div>
         ),
@@ -82,10 +102,10 @@ function UsersList() {
         cellRenderer: (p: ICellRendererParams<User>) => (p.value ? "✅" : "❌"),
       },
     ],
-    [deleteMutation, onEditClick]
+    [deleteMutation, deletingUserId, onEditClick]
   );
 
-  if (isPending) return <p>Loading…</p>;
+  if (isPending) return <LoadingScreen />;
   if (error instanceof Error) return <p>Error: {error.message}</p>;
 
   const rowData = data?.users ?? [];

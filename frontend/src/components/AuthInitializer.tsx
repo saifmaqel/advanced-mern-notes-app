@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import authApis from "../api/authApis";
 import { setCredentials } from "../features/auth/authSlice";
 import { scheduleTokenExpiryWatcher } from "../api/axiosInstance";
+import LoadingScreen from "./LoadingScreen";
 
 interface AuthInitializerProps {
   children: React.ReactNode;
@@ -39,18 +40,7 @@ export const AuthInitializer = ({ children }: AuthInitializerProps) => {
   }, []);
 
   if (isChecking) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
-      >
-        <div>Loading...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return <>{children}</>;

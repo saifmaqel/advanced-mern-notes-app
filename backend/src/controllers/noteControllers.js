@@ -1,116 +1,176 @@
 import Note from "../models/Note.js";
 import User from "../models/User.js";
-import asyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 
 // @route GET /notes
 // @access Private
-const getAllNotes = asyncHandler(async (req, res) => {
-  const notes = await Note.find().lean();
-  if (!notes || !notes.length) {
-    return res.status(400).json({ message: "No notes found" });
+const getAllNotes = async (req, res) => {
+  try {
+    const roles = req.roles;
+    const username = req.user;
+
+    let notes;
+
+    if (roles.includes("Manager") || roles.includes("Admin")) {
+      notes = await Note.find().lean();
+    } else {
+      const user = await User.findOne({ username }).lean();
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      notes = await Note.find({ user: user._id }).lean();
+    }
+
+    if (!notes || notes.length === 0) {
+      return res.status(404).json({ message: "No notes found" });
+    }
+
+    const notesWithUser = await Promise.all(
+      notes.map(async (note) => {
+        const user = await User.findById(note.user).lean();
+        return { ...note, username: user?.username || "Unknown User" };
+      })
+    );
+
+    return res.status(200).json({ notes: notesWithUser });
+  } catch (error) {
+    console.error("Error fetching notes:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
+};
 
-  // Attach usernames to notes
-  const notesWithUser = await Promise.all(
-    notes.map(async (note) => {
-      const user = await User.findById(note.user).lean();
-      return { ...note, username: user?.username || "Unknown User" };
-    })
-  );
+// @route GET /notes/:id
+// @access Private
+const getNoteById = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  return res.json({ notes: notesWithUser });
-});
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid note ID" });
+    }
 
-// @route   GET /notes/:id
-// @access  Private
-const getNoteById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+    const note = await Note.findById(id).lean();
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "Invalid note ID" });
+    if (!note) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    return res.status(200).json({ note });
+  } catch (error) {
+    console.error("Error fetching note by ID:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
-
-  const note = await Note.findById(id).lean();
-
-  if (!note) {
-    return res.status(404).json({ message: "Note not found" });
-  }
-
-  return res.status(200).json({ note });
-});
+};
 
 // @route POST /notes
 // @access Private
-const createNewNote = asyncHandler(async (req, res) => {
-  // const user_id = req.user._id;
-  const { user, title, text, completed } = req.body;
-  if (!user || !title || !text) {
-    return res.status(400).json({ message: "All fields are required" });
+const createNewNote = async (req, res) => {
+  try {
+    const { title, text, completed } = req.body;
+    const username = req.user;
+
+    if (!title || !text) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const user = await User.findOne({ username }).lean();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const duplicate = await Note.findOne({ user: user._id, title }).lean();
+    if (duplicate) {
+      return res.status(409).json({ message: "Note title is already in use" });
+    }
+
+    const note = await Note.create({
+      user: user._id,
+      title,
+      text,
+      completed,
+    });
+
+    return res.status(201).json({ note });
+  } catch (error) {
+    console.error("Error creating note:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
-
-  const duplicate = await Note.findOne({ title }).lean();
-  if (duplicate) {
-    return res.status(400).json({ message: "Note title is already used" });
-  }
-
-  const note = await Note.create({ user, title, text, completed });
-
-  if (!note) {
-    return res.status(400).json({ message: "Invalid Note Data received" });
-  }
-
-  return res.json({ note });
-});
+};
 
 // @route PATCH /notes/:id
 // @access Private
-const updateNote = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { title, text, completed } = req.body;
+const updateNote = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, text, completed } = req.body;
+    const username = req.user;
 
-  if (!title || !text || typeof completed !== "boolean") {
-    return res.status(400).json({ message: "All fields are required" });
+    if (!title || !text || typeof completed !== "boolean") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid note ID" });
+    }
+
+    const user = await User.findOne({ username }).lean();
+    if (!user || !user.active) {
+      return res.status(404).json({ message: "User not found or inactive" });
+    }
+
+    const duplicate = await Note.findOne({ user: user._id, title }).lean();
+    if (duplicate && duplicate._id.toString() !== id) {
+      return res.status(409).json({ message: "Note title is already in use" });
+    }
+
+    const updatedNote = await Note.findByIdAndUpdate(
+      id,
+      { title, text, completed },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedNote) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    return res.status(200).json({ note: updatedNote });
+  } catch (error) {
+    console.error("Error updating note:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "Invalid note ID" });
-  }
-
-  const duplicate = await Note.findOne({ title }).lean();
-  if (duplicate && !duplicate._id.equals(id)) {
-    return res.status(409).json({ message: "Note title is already in use" });
-  }
-
-  const updatedNote = await Note.findByIdAndUpdate(
-    id,
-    { title, text, completed },
-    { new: true, runValidators: true }
-  );
-
-  if (!updatedNote) {
-    return res.status(404).json({ message: "Note not found" });
-  }
-
-  return res.status(200).json({ note: updatedNote });
-});
+};
 
 // @route DELETE /notes/:id
 // @access Private
-const deleteNote = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+const deleteNote = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "Invalid note ID" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid note ID" });
+    }
+
+    const deletedNote = await Note.findByIdAndDelete(id);
+    if (!deletedNote) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    return res.status(200).json({ note: deletedNote });
+  } catch (error) {
+    console.error("Error deleting note:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
-
-  const deletedNote = await Note.findByIdAndDelete(id);
-  if (!deletedNote) {
-    return res.status(404).json({ message: "Note not found" });
-  }
-
-  return res.json({ note: deletedNote });
-});
+};
 
 const noteControllers = {
   getAllNotes,

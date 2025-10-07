@@ -8,6 +8,11 @@ import { ErrorBoundary } from "react-error-boundary";
 import ErrorFallback from "./components/ErrorBoundary.tsx";
 import { Toaster } from "react-hot-toast";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { disableReactDevTools } from "@fvilers/disable-react-devtools";
+
+if (process.env.NODE_ENV === "production") {
+  disableReactDevTools();
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {

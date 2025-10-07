@@ -3,8 +3,12 @@ import { useForm, Controller } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import usersApis from "../../api/userApis";
-import type { AddEditUser as AddEditUserType } from "../../api/types";
+import type {
+  AddEditUser as AddEditUserType,
+  GetAllUsersResponse,
+} from "../../api/types";
 import { USERS_LIST_QUERY_KEY, USER_QUERY_KEY } from "../constants";
+import LoadingScreen from "../../components/LoadingScreen";
 
 interface UserFormInputs {
   username: string;
@@ -53,10 +57,34 @@ export default function AddEditUser() {
       if (id) return usersApis.update(id, formData);
       return usersApis.create(formData);
     },
-    onSuccess: (data) => {
-      console.log(data);
-      if (!data?.httpStatusOk) return;
-      queryClient.invalidateQueries({ queryKey: [USERS_LIST_QUERY_KEY] });
+    onSuccess: (response) => {
+      if (!response?.httpStatusOk) return;
+
+      const newOrUpdatedUser = response.user;
+
+      queryClient.setQueryData(
+        [USERS_LIST_QUERY_KEY],
+        (oldData: GetAllUsersResponse | undefined) => {
+          if (!oldData) return oldData;
+          const existingUsers = oldData.users || [];
+          const userIndex = existingUsers.findIndex(
+            (user) => user._id === newOrUpdatedUser._id
+          );
+          let updatedUsers;
+          if (userIndex !== -1) {
+            updatedUsers = existingUsers.map((user) =>
+              user._id === newOrUpdatedUser._id ? newOrUpdatedUser : user
+            );
+          } else {
+            updatedUsers = [...existingUsers, newOrUpdatedUser];
+          }
+          return {
+            ...oldData,
+            users: updatedUsers,
+          };
+        }
+      );
+
       navigate("/dash/users");
     },
   });
@@ -72,7 +100,7 @@ export default function AddEditUser() {
     mutate(user);
   };
 
-  if (isLoading) return <p>Loading…</p>;
+  if (isLoading) return <LoadingScreen />;
 
   return (
     <div className="max-w-xl mx-auto p-6">

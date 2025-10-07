@@ -3,8 +3,9 @@ import { useForm, Controller } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import notesApis from "../../api/noteApis";
-import type { AddEditNote } from "../../api/types";
+import type { AddEditNote, GetAllNotesResponse } from "../../api/types";
 import { NOTE_QUERY_KEY, NOTES_LIST_QUERY_KEY } from "../constants";
+import LoadingScreen from "../../components/LoadingScreen";
 
 interface NoteFormInputs {
   title: string;
@@ -49,12 +50,43 @@ export default function AddEditNote() {
         return notesApis.create(data);
       }
     },
-    onSuccess: (data) => {
-      if (!data.httpStatusOk) {
-        return;
-      }
-      queryClient.invalidateQueries({ queryKey: [NOTES_LIST_QUERY_KEY] });
+    onSuccess: (response) => {
+      if (!response.httpStatusOk) return;
+
+      const updatedNote = response.note;
+
+      queryClient.setQueryData(
+        [NOTES_LIST_QUERY_KEY],
+        (oldData: GetAllNotesResponse | undefined) => {
+          if (!oldData) return oldData;
+
+          const existingNotes = oldData.notes || [];
+
+          const noteIndex = existingNotes.findIndex(
+            (note) => note._id === updatedNote._id
+          );
+
+          let newNotes;
+          if (noteIndex !== -1) {
+            newNotes = [...existingNotes];
+            newNotes[noteIndex] = updatedNote;
+          } else {
+            console.log(updatedNote);
+
+            newNotes = [...existingNotes, updatedNote];
+          }
+
+          return {
+            ...oldData,
+            notes: newNotes,
+          };
+        }
+      );
+
       navigate("/dash/notes");
+    },
+    onError: (error) => {
+      console.log(error);
     },
   });
 
@@ -70,7 +102,7 @@ export default function AddEditNote() {
     mutate(note);
   };
 
-  if (isLoading) return <p>Loading…</p>;
+  if (isLoading) return <LoadingScreen />;
 
   return (
     <div className="max-w-xl mx-auto p-6">

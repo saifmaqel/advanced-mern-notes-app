@@ -18,7 +18,13 @@ export default function AppRoutes() {
   const { isManager, isAdmin } = useAuth();
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense
+      fallback={
+        <div className="h-screen">
+          <LoadingScreen />
+        </div>
+      }
+    >
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<LandingPage />} />

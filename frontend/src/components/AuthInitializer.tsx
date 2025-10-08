@@ -40,7 +40,11 @@ export const AuthInitializer = ({ children }: AuthInitializerProps) => {
   }, []);
 
   if (isChecking) {
-    return <LoadingScreen />;
+    return (
+      <div className="h-screen">
+        <LoadingScreen />
+      </div>
+    );
   }
 
   return <>{children}</>;

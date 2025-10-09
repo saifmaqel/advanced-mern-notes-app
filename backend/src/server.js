@@ -30,7 +30,7 @@ app.use(cookieParser());
 
 app.use("/", express.static(path.join(process.cwd(), "public")));
 app.use("/", root);
-app.use("/api/ping", pingRoute);
+app.use("/ping", pingRoute);
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/notes", noteRoutes);

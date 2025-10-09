@@ -12,6 +12,8 @@ import mongoose from "mongoose";
 import userRoutes from "./routes/userRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
 import authRoutes from "./routes/authRouts.js";
+import pingRoute from "./routes/pingRoutes.js";
+
 // import loginLimiter from "../middleware/loginLimiter.js";
 
 dotenv.config();
@@ -26,9 +28,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-// app.use(loginLimiter);
 app.use("/", express.static(path.join(process.cwd(), "public")));
 app.use("/", root);
+app.use("/api/ping", pingRoute);
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/notes", noteRoutes);

@@ -51,6 +51,11 @@ mongoose.connection.once("open", () => {
   console.log("CONNECTED TO MONGODB");
   app.listen(PORT, () => {
     console.log("server running on port ", PORT);
+    setInterval(() => {
+      fetch(`https://technotes-api-1a2h.onrender.com/ping`)
+        .then((res) => console.log("Pinged self to stay awake:", res.status))
+        .catch((err) => console.error("Ping failed:", err));
+    }, 14 * 60 * 1000);
   });
 });
 
